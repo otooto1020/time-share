@@ -210,6 +210,12 @@
                 document.getElementById('customSoundDiv').classList.remove('hidden');
                 document.getElementById('customSoundInput').value = customAlarmUrl;
             }
+            
+            // 通知の許可をリクエスト
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+            
             initializeTimers();
             if (currentRoom) {
                 document.getElementById('currentRoom').textContent = currentRoom;
@@ -306,28 +312,51 @@
         function startAlarmLoop(timerId) {
             stopAlarmLoop(timerId);
             
+            // バイブレーション（Androidのみ対応）
             if (vibrationEnabled && 'vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200, 100, 200]);
                 alarmIntervals[`vib-${timerId}`] = setInterval(() => {
                     navigator.vibrate([200, 100, 200, 100, 200]);
                 }, 1500);
             }
             
+            // 音声アラーム
             if (alarmEnabled) {
+                let audioElement = null;
+                
                 const playAlarmSound = () => {
-                    if (alarmSound === 'custom' && customAlarmUrl) {
-                        const audio = new Audio(customAlarmUrl);
-                        audio.volume = alarmVolume;
-                        audio.play().catch(() => {});
-                    } else if (alarmSound === 'beep') {
-                        playBeep();
-                    } else if (alarmSound === 'bell') {
-                        playBell();
-                    } else if (alarmSound === 'alarm') {
-                        playAlarm();
+                    try {
+                        if (alarmSound === 'custom' && customAlarmUrl) {
+                            if (!audioElement) {
+                                audioElement = new Audio(customAlarmUrl);
+                                audioElement.volume = alarmVolume;
+                                audioElement.loop = false;
+                            }
+                            audioElement.currentTime = 0;
+                            audioElement.play().catch(err => console.log('Audio play failed:', err));
+                        } else if (alarmSound === 'beep') {
+                            playBeep();
+                        } else if (alarmSound === 'bell') {
+                            playBell();
+                        } else if (alarmSound === 'alarm') {
+                            playAlarm();
+                        }
+                    } catch (e) {
+                        console.log('Sound error:', e);
                     }
                 };
+                
                 playAlarmSound();
                 alarmIntervals[`sound-${timerId}`] = setInterval(playAlarmSound, 2000);
+            }
+            
+            // iOSの通知（フォールバック）
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('⏰ タイマー完了！', {
+                    body: `タイマー #${timerId} が終了しました`,
+                    tag: `timer-${timerId}`,
+                    requireInteraction: true
+                });
             }
         }
 
