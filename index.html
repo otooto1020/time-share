@@ -1,7 +1,9 @@
-cd /Users/otooto/Downloads/time-share
-
 pbpaste > index.html
 
+# 確認（600行以上あるはず）
+wc -l index.html
+
+# プッシュ
 git add index.html
-git commit -m "Fix: Remove duplicate playSound function"
+git commit -m "Fix: Add complete working timer code"
 git push origin main
